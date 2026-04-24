@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+<title>Haikursive — Learn to Write Cursive!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Playwrite+US+Trad:wght@100..400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #a8e1ff;
+    --sky2: #c8f1ff;
+    --sun: #ffd65a;
+    --pink: #ff8fb8;
+    --green: #7ad66a;
+    --blue: #5aa9ff;
+    --purple: #a48cff;
+    --ink: #2b2b4a;
+    --paper: #fffef6;
+    --rule: #ffb3c7;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: "Fredoka", system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--sky) 0%, var(--sky2) 50%, #fff6c9 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  header { text-align: center; padding: 18px 12px 4px; }
+  h1 {
+    margin: 0;
+    font-weight: 700;
+    font-size: clamp(28px, 5vw, 44px);
+    color: #fff;
+    text-shadow: 0 3px 0 #ff8fb8, 0 6px 0 rgba(0,0,0,0.08);
+    letter-spacing: 0.5px;
+  }
+  h1 .cursive {
+    font-family: "Playwrite US Trad", cursive;
+    font-weight: 400;
+    font-size: 1.1em;
+    color: #fff;
+  }
+  .tag { font-size: 14px; color: #4a4a7a; opacity: 0.85; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 8px 14px 40px; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    margin: 12px 0;
+  }
+  .toggle-group {
+    display: inline-flex;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    padding: 4px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+  }
+  .toggle-group button {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .toggle-group button.active { background: var(--sun); }
+
+  .items {
+    display: grid;
+    gap: 6px;
+    margin: 10px 0 18px;
+  }
+  .items.letters  { grid-template-columns: repeat(13, minmax(0, 1fr)); }
+  .items.words    { grid-template-columns: repeat(5,  minmax(0, 1fr)); }
+  .items.sentences{ grid-template-columns: repeat(2,  minmax(0, 1fr)); }
+  .items button {
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    background: #fff;
+    font-family: "Playwrite US Trad", cursive;
+    cursor: pointer;
+    padding: 6px 4px;
+    line-height: 1.1;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.12);
+    transition: transform 0.05s;
+    position: relative;
+    color: var(--ink);
+  }
+  .items.letters button  { aspect-ratio: 1/1; font-size: clamp(20px, 2.4vw, 30px); }
+  .items.words button    { font-size: clamp(18px, 2.2vw, 26px); }
+  .items.sentences button{ font-size: clamp(16px, 2.0vw, 22px); text-align: left; padding: 10px 14px; }
+  .items button:active   { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.12); }
+  .items button.current  { background: var(--sun); transform: translateY(-2px); box-shadow: 0 5px 0 rgba(0,0,0,0.15); }
+  .items button.done::after {
+    content: "★";
+    position: absolute;
+    top: -6px; right: -4px;
+    background: var(--green);
+    color: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    width: 18px; height: 18px;
+    font-family: "Fredoka";
+    font-size: 11px;
+    line-height: 14px;
+    text-align: center;
+  }
+
+  .stage {
+    background: var(--paper);
+    border: 4px solid var(--ink);
+    border-radius: 22px;
+    padding: 8px;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.12);
+    position: relative;
+  }
+  .canvas-holder {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+  }
+  #rules { pointer-events: none; z-index: 1; }
+  #ghost { pointer-events: none; z-index: 2; }
+  #draw  { z-index: 3; cursor: crosshair; }
+
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  .btn {
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    padding: 10px 20px;
+    font: 700 16px/1 "Fredoka", sans-serif;
+    color: var(--ink);
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+    transition: transform 0.05s;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .btn.primary   { background: var(--green); color: #fff; }
+  .btn.secondary { background: var(--pink);  color: #fff; }
+  .btn.ghost     { background: var(--sun); }
+  .btn.blue      { background: var(--blue);  color: #fff; }
+
+  .score-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-content: center;
+    margin: 10px 0 0;
+    font-weight: 700;
+    flex-wrap: wrap;
+    text-align: center;
+  }
+  .stars {
+    font-size: 24px;
+    letter-spacing: 4px;
+    color: var(--sun);
+    text-shadow: 0 0 2px rgba(0,0,0,0.25);
+  }
+  .msg {
+    text-align: center;
+    min-height: 1.6em;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 8px;
+    font-size: 18px;
+    padding: 0 6px;
+  }
+  .total {
+    position: absolute;
+    top: -14px; right: 12px;
+    background: var(--purple);
+    color: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    padding: 4px 14px;
+    font-weight: 700;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+  }
+  .hidden { display: none !important; }
+
+  /* Celebration */
+  #celebrate { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
+  .confetti {
+    position: absolute;
+    width: 10px; height: 14px;
+    top: -20px;
+    animation: fall linear forwards;
+  }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+  .bravo {
+    position: absolute;
+    left: 50%; top: 40%;
+    transform: translate(-50%, -50%) scale(0);
+    font-family: "Playwrite US Trad", cursive;
+    font-size: clamp(60px, 14vw, 140px);
+    color: #fff;
+    text-shadow: 0 4px 0 var(--pink), 0 10px 30px rgba(0,0,0,0.2);
+    animation: pop 1.6s ease forwards;
+  }
+  @keyframes pop {
+    0%   { transform: translate(-50%, -50%) scale(0) rotate(-20deg); opacity: 0; }
+    40%  { transform: translate(-50%, -50%) scale(1.1) rotate(5deg);  opacity: 1; }
+    70%  { transform: translate(-50%, -50%) scale(1)   rotate(-2deg); }
+    100% { transform: translate(-50%, -50%) scale(1)   rotate(0);     opacity: 0; }
+  }
+
+  @media (max-width: 640px) {
+    header { padding: 10px 8px 2px; }
+    h1 { font-size: clamp(22px, 6.5vw, 30px); text-shadow: 0 2px 0 #ff8fb8; }
+    .tag { font-size: 12px; }
+    .wrap { padding: 4px 10px 20px; }
+
+    .controls { gap: 6px; margin: 6px 0; }
+    .toggle-group { padding: 3px; }
+    .toggle-group button { padding: 6px 10px; font-size: 13px; }
+
+    /* Horizontal-scrolling item strip saves vertical space for the canvas */
+    .items {
+      display: flex !important;
+      grid-template-columns: none !important;
+      overflow-x: auto;
+      overflow-y: hidden;
+      gap: 8px;
+      padding: 6px 2px 10px;
+      margin: 4px -10px 8px;
+      padding-left: 10px;
+      padding-right: 10px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .items button {
+      flex: 0 0 auto;
+      scroll-snap-align: center;
+      line-height: 1;
+    }
+    .items.letters button   { width: 44px; height: 44px; font-size: 22px; aspect-ratio: auto; }
+    .items.words button     { min-width: 86px; padding: 10px 14px; font-size: 20px; }
+    .items.sentences button { min-width: 220px; padding: 10px 14px; font-size: 18px; }
+
+    .canvas-holder { aspect-ratio: 3 / 2; border-radius: 12px; }
+    .stage { padding: 6px; border-radius: 18px; border-width: 3px; }
+
+    .total { top: -11px; right: 10px; font-size: 13px; padding: 3px 10px; border-width: 2px; }
+
+    .score-bar { font-size: 13px; gap: 6px; margin-top: 8px; }
+    .score-bar .stars { font-size: 20px; }
+    .msg { font-size: 14px; margin-top: 6px; }
+
+    .buttons { gap: 8px; margin-top: 8px; }
+    .btn { padding: 9px 14px; font-size: 14px; border-width: 2px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); }
+  }
+  @media (max-width: 380px) {
+    h1 { font-size: 22px; }
+    .items.letters button { width: 40px; height: 40px; font-size: 20px; }
+    .items.words button   { min-width: 74px; font-size: 18px; }
+    .btn { padding: 8px 10px; font-size: 13px; }
+    .toggle-group button { padding: 5px 8px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Welcome to <span class="cursive">Haikursive</span>!</h1>
+  <div class="tag">Trace the faded letter, word, or sentence. Earn stars!</div>
+</header>
+
+<div class="wrap">
+  <div class="controls">
+    <div class="toggle-group" id="modeToggle" aria-label="Challenge mode">
+      <button data-mode="letter"   class="active">🔤 Letters</button>
+      <button data-mode="word">✏️ Words</button>
+      <button data-mode="sentence">📖 Sentences</button>
+    </div>
+    <div class="toggle-group" id="caseToggle" aria-label="Letter case">
+      <button data-case="upper" class="active">ABC</button>
+      <button data-case="lower">abc</button>
+    </div>
+    <button class="btn blue" id="prevBtn">◀ Prev</button>
+    <button class="btn blue" id="nextBtn">Next ▶</button>
+  </div>
+
+  <div class="items letters" id="items"></div>
+
+  <div class="stage">
+    <div class="total" id="total">⭐ 0</div>
+    <div class="canvas-holder">
+      <canvas id="rules"></canvas>
+      <canvas id="ghost"></canvas>
+      <canvas id="draw"></canvas>
+    </div>
+    <div class="score-bar">
+      <div>Stars for this challenge:</div>
+      <div class="stars" id="stars">☆☆☆</div>
+    </div>
+    <div class="msg" id="msg">Tap and drag to trace. Try to stay on the faded lines!</div>
+    <div class="buttons">
+      <button class="btn ghost" id="showBtn">👀 Show me</button>
+      <button class="btn secondary" id="clearBtn">🧽 Clear</button>
+      <button class="btn primary" id="checkBtn">✅ Check my work</button>
+    </div>
+  </div>
+</div>
+
+<div id="celebrate"></div>
+
+<script>
+(() => {
+  const WORDS = [
+    "cat", "dog", "sun", "bee", "hat",
+    "fish", "cake", "book", "moon", "star",
+    "tree", "love", "smile", "happy", "apple"
+  ];
+  const SENTENCES = [
+    "I love you.",
+    "The cat sat.",
+    "We are happy.",
+    "My dog is fun.",
+    "The sun is bright.",
+    "Cursive is cool.",
+    "Practice every day.",
+    "Kindness wins."
+  ];
+
+  const rulesCanvas = document.getElementById("rules");
+  const ghostCanvas = document.getElementById("ghost");
+  const drawCanvas  = document.getElementById("draw");
+  const rCtx = rulesCanvas.getContext("2d");
+  const gCtx = ghostCanvas.getContext("2d");
+  const dCtx = drawCanvas.getContext("2d", { willReadFrequently: true });
+
+  const itemsDiv  = document.getElementById("items");
+  const msg       = document.getElementById("msg");
+  const starsEl   = document.getElementById("stars");
+  const totalEl   = document.getElementById("total");
+  const modeToggle = document.getElementById("modeToggle");
+  const caseToggle = document.getElementById("caseToggle");
+
+  const state = {
+    mode: "letter",
+    caseMode: "upper",
+    letterIdx: 0,
+    wordIdx: 0,
+    sentenceIdx: 0,
+    stars: {},
+    hasDrawn: false,
+  };
+
+  const STAR_KEY = "cursiveclub_stars_v2";
+  try {
+    const saved = JSON.parse(localStorage.getItem(STAR_KEY) || "{}");
+    if (saved && typeof saved === "object") state.stars = saved;
+  } catch (e) {}
+
+  const letterFor = (idx, mode) => {
+    const base = mode === "upper" ? 65 : 97;
+    return String.fromCharCode(base + idx);
+  };
+
+  function currentList() {
+    if (state.mode === "letter") return [...Array(26).keys()].map(i => letterFor(i, state.caseMode));
+    if (state.mode === "word")   return WORDS;
+    return SENTENCES;
+  }
+  function currentIdx() {
+    if (state.mode === "letter") return state.letterIdx;
+    if (state.mode === "word")   return state.wordIdx;
+    return state.sentenceIdx;
+  }
+  function setCurrentIdx(i) {
+    const list = currentList();
+    const n = list.length;
+    const idx = ((i % n) + n) % n;
+    if (state.mode === "letter")       state.letterIdx = idx;
+    else if (state.mode === "word")    state.wordIdx = idx;
+    else                                state.sentenceIdx = idx;
+  }
+  function currentContent() {
+    return currentList()[currentIdx()];
+  }
+  function keyFor(mode, idx) {
+    if (mode === "letter") return "L" + state.caseMode + idx;
+    if (mode === "word")   return "W" + idx;
+    return "S" + idx;
+  }
+  function currentKey() { return keyFor(state.mode, currentIdx()); }
+
+  // --- Layout / DPR ---
+  function sizeCanvases() {
+    const holder = drawCanvas.parentElement;
+    const rect = holder.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    for (const c of [rulesCanvas, ghostCanvas, drawCanvas]) {
+      c.width  = Math.floor(rect.width  * dpr);
+      c.height = Math.floor(rect.height * dpr);
+      const ctx = c.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+  }
+
+  // Pick font size + rule positions that fit the current content.
+  // Playwrite cursive capitals have tall entry loops and lowercase y/g/j/p/q
+  // drop well below baseline — metrics here budget for both.
+  function computeLayout() {
+    const w = drawCanvas.clientWidth;
+    const h = drawCanvas.clientHeight;
+    const content = currentContent();
+
+    // Ratios expressed as fractions of fontSize
+    const ascenderR  = 1.00;  // space above baseline for tall capitals + loops
+    const descenderR = 0.40;  // space below baseline for y/g/j/p/q
+    const xHeightR   = 0.50;  // top of lowercase x-height
+    const vMargin    = Math.max(8, h * 0.05);
+
+    const availableH = h - 2 * vMargin;
+    // Font size bounded by available vertical space divided by total vertical extent
+    let fontSize = availableH / (ascenderR + descenderR);
+    // Leave a bit more breathing room for words/sentences
+    if (state.mode !== "letter") fontSize *= 0.95;
+
+    // Shrink if the string is too wide
+    gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
+    const maxW = w * 0.92;
+    const tm = gCtx.measureText(content);
+    if (tm.width > maxW) fontSize = fontSize * (maxW / tm.width);
+
+    gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
+    const textWidth = gCtx.measureText(content).width;
+
+    // Place baseline so descenders clear the bottom margin
+    const baseY    = h - vMargin - fontSize * descenderR;
+    const topY     = baseY - fontSize * ascenderR;
+    const midY     = baseY - fontSize * xHeightR;
+    const descendY = baseY + fontSize * descenderR;
+
+    const startX = (w - textWidth) / 2;
+    return { w, h, fontSize, baseY, topY, midY, descendY, startX, textWidth, content };
+  }
+
+  // --- Rule lines ---
+  function drawRules(L) {
+    const { w, h, topY, midY, baseY, descendY } = L;
+    rCtx.clearRect(0, 0, w, h);
+    rCtx.lineWidth = 2;
+
+    rCtx.setLineDash([8, 6]);
+    rCtx.strokeStyle = "#ffb3c7";
+    rCtx.beginPath(); rCtx.moveTo(0, topY); rCtx.lineTo(w, topY); rCtx.stroke();
+
+    rCtx.strokeStyle = "#a8c8ff";
+    rCtx.beginPath(); rCtx.moveTo(0, midY); rCtx.lineTo(w, midY); rCtx.stroke();
+
+    rCtx.setLineDash([]);
+    rCtx.strokeStyle = "#ff8fb8";
+    rCtx.lineWidth = 3;
+    rCtx.beginPath(); rCtx.moveTo(0, baseY); rCtx.lineTo(w, baseY); rCtx.stroke();
+
+    rCtx.setLineDash([4, 8]);
+    rCtx.lineWidth = 2;
+    rCtx.strokeStyle = "#e0d2f5";
+    rCtx.beginPath(); rCtx.moveTo(0, descendY); rCtx.lineTo(w, descendY); rCtx.stroke();
+    rCtx.setLineDash([]);
+  }
+
+  // --- Ghost text ---
+  function drawGhost(L, opts = {}) {
+    const { w, h, fontSize, baseY, startX, content } = L;
+    gCtx.clearRect(0, 0, w, h);
+    gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
+    gCtx.textAlign = "left";
+    gCtx.textBaseline = "alphabetic";
+    gCtx.fillStyle = `rgba(70, 80, 160, ${opts.bright ? 0.95 : 0.55})`;
+    gCtx.fillText(content, startX, baseY);
+
+    // Start dot (green) at the first letter
+    gCtx.fillStyle = "rgba(122, 214, 106, 0.95)";
+    gCtx.beginPath();
+    gCtx.arc(startX + fontSize * 0.04, baseY - fontSize * 0.15, Math.max(5, fontSize * 0.05), 0, Math.PI * 2);
+    gCtx.fill();
+    gCtx.strokeStyle = "#fff";
+    gCtx.lineWidth = 2;
+    gCtx.stroke();
+  }
+
+  // --- Drawing ---
+  let drawing = false;
+  let lastX = 0, lastY = 0;
+
+  function clearDraw() {
+    dCtx.clearRect(0, 0, drawCanvas.clientWidth, drawCanvas.clientHeight);
+    state.hasDrawn = false;
+  }
+
+  function posFromEvent(e) {
+    const rect = drawCanvas.getBoundingClientRect();
+    const pt = e.touches ? e.touches[0] : e;
+    return { x: pt.clientX - rect.left, y: pt.clientY - rect.top };
+  }
+  function startDraw(e) {
+    e.preventDefault();
+    drawing = true;
+    const p = posFromEvent(e);
+    lastX = p.x; lastY = p.y;
+    dCtx.lineCap = "round";
+    dCtx.lineJoin = "round";
+    // Thinner pen for longer content so strokes don't smear together
+    const base = state.mode === "letter" ? 0.035 : state.mode === "word" ? 0.025 : 0.02;
+    dCtx.lineWidth = Math.max(6, drawCanvas.clientHeight * base);
+    dCtx.strokeStyle = "#2f55d4";
+    dCtx.beginPath();
+    dCtx.arc(p.x, p.y, dCtx.lineWidth/2, 0, Math.PI*2);
+    dCtx.fillStyle = "#2f55d4";
+    dCtx.fill();
+    state.hasDrawn = true;
+  }
+  function moveDraw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const p = posFromEvent(e);
+    dCtx.beginPath();
+    dCtx.moveTo(lastX, lastY);
+    dCtx.lineTo(p.x, p.y);
+    dCtx.stroke();
+    lastX = p.x; lastY = p.y;
+  }
+  function endDraw(e) {
+    if (!drawing) return;
+    e && e.preventDefault && e.preventDefault();
+    drawing = false;
+  }
+  drawCanvas.addEventListener("mousedown", startDraw);
+  drawCanvas.addEventListener("mousemove", moveDraw);
+  window.addEventListener("mouseup",   endDraw);
+  drawCanvas.addEventListener("touchstart", startDraw, { passive: false });
+  drawCanvas.addEventListener("touchmove",  moveDraw,  { passive: false });
+  drawCanvas.addEventListener("touchend",   endDraw);
+  drawCanvas.addEventListener("touchcancel",endDraw);
+
+  // --- Scoring ---
+  function scoreTrace(L) {
+    const { w, h, fontSize, baseY, startX, content } = L;
+
+    const off = document.createElement("canvas");
+    off.width = drawCanvas.width;
+    off.height = drawCanvas.height;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const oCtx = off.getContext("2d");
+    oCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    oCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
+    oCtx.textAlign = "left";
+    oCtx.textBaseline = "alphabetic";
+    oCtx.fillStyle = "#000";
+    oCtx.fillText(content, startX, baseY);
+
+    // Playwrite renders thin guide strokes — widen the "near the letter" tolerance
+    // to fairly score a kid's thick pen against a thin line.
+    const blurPx = state.mode === "letter" ? 14 : state.mode === "word" ? 11 : 9;
+    const blurred = document.createElement("canvas");
+    blurred.width = off.width;
+    blurred.height = off.height;
+    const bCtx = blurred.getContext("2d");
+    bCtx.filter = `blur(${blurPx}px)`;
+    bCtx.drawImage(off, 0, 0);
+
+    const ghostData   = oCtx.getImageData(0, 0, off.width, off.height).data;
+    const blurredData = bCtx.getImageData(0, 0, blurred.width, blurred.height).data;
+    const userData    = dCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height).data;
+
+    let ghostPixels = 0, coveredGhost = 0;
+    let userPixels = 0,  userOnLetter = 0;
+
+    for (let i = 3; i < ghostData.length; i += 4) {
+      const gA = ghostData[i], bA = blurredData[i], uA = userData[i];
+      if (gA > 40) { ghostPixels++; if (uA > 40) coveredGhost++; }
+      if (uA > 40) { userPixels++;  if (bA > 20) userOnLetter++; }
+    }
+    if (ghostPixels === 0 || userPixels === 0) return { stars: 0, precision: 0, coverage: 0 };
+
+    const coverage  = coveredGhost / ghostPixels;
+    const precision = userOnLetter / userPixels;
+    const score = coverage * 0.6 + precision * 0.4;
+
+    // Looser thresholds for longer content (harder to be precise)
+    const t = state.mode === "letter"
+      ? { s1: 0.35, p1: 0.45, s2: 0.55, p2: 0.60, s3: 0.75, p3: 0.75 }
+      : state.mode === "word"
+      ? { s1: 0.30, p1: 0.40, s2: 0.48, p2: 0.55, s3: 0.65, p3: 0.70 }
+      : { s1: 0.25, p1: 0.35, s2: 0.42, p2: 0.50, s3: 0.58, p3: 0.65 };
+
+    let stars = 0;
+    if (score > t.s1 && precision > t.p1) stars = 1;
+    if (score > t.s2 && precision > t.p2) stars = 2;
+    if (score > t.s3 && precision > t.p3) stars = 3;
+    return { stars, precision, coverage, score };
+  }
+
+  // --- UI ---
+  function buildItemGrid() {
+    itemsDiv.className = "items " + (state.mode === "letter" ? "letters"
+                                   : state.mode === "word"   ? "words"
+                                   : "sentences");
+    itemsDiv.innerHTML = "";
+    const list = currentList();
+    list.forEach((text, i) => {
+      const btn = document.createElement("button");
+      btn.textContent = text;
+      btn.addEventListener("click", () => {
+        setCurrentIdx(i);
+        refresh();
+      });
+      itemsDiv.appendChild(btn);
+    });
+    updateItemGrid();
+  }
+  function updateItemGrid() {
+    const kids = itemsDiv.children;
+    for (let i = 0; i < kids.length; i++) {
+      kids[i].classList.toggle("current", i === currentIdx());
+      const s = state.stars[keyFor(state.mode, i)] || 0;
+      kids[i].classList.toggle("done", s >= 1);
+    }
+  }
+
+  function updateStars() {
+    const s = state.stars[currentKey()] || 0;
+    starsEl.textContent = "★".repeat(s) + "☆".repeat(3 - s);
+    let total = 0;
+    for (const v of Object.values(state.stars)) total += v;
+    totalEl.textContent = "⭐ " + total;
+  }
+
+  function refresh() {
+    sizeCanvases();
+    const L = computeLayout();
+    drawRules(L);
+    drawGhost(L);
+    clearDraw();
+    updateItemGrid();
+    updateStars();
+    caseToggle.classList.toggle("hidden", state.mode !== "letter");
+
+    if (state.mode === "letter")      msg.textContent = "Start at the green dot. Trace slowly — you got this!";
+    else if (state.mode === "word")   msg.textContent = "Trace the whole word in one smooth flow. Take your time!";
+    else                               msg.textContent = "Trace the full sentence. Go slow — remember to leave spaces between words!";
+  }
+
+  // Mode toggle
+  modeToggle.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-mode]");
+    if (!btn) return;
+    for (const b of modeToggle.children) b.classList.toggle("active", b === btn);
+    state.mode = btn.dataset.mode;
+    buildItemGrid();
+    refresh();
+  });
+  // Case toggle
+  caseToggle.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-case]");
+    if (!btn) return;
+    for (const b of caseToggle.children) b.classList.toggle("active", b === btn);
+    state.caseMode = btn.dataset.case;
+    if (state.mode === "letter") { buildItemGrid(); refresh(); }
+  });
+
+  document.getElementById("prevBtn").addEventListener("click", () => {
+    setCurrentIdx(currentIdx() - 1);
+    refresh();
+  });
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    setCurrentIdx(currentIdx() + 1);
+    refresh();
+  });
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    clearDraw();
+    msg.textContent = "Fresh paper! Give it another try.";
+  });
+  document.getElementById("showBtn").addEventListener("click", () => {
+    const L = computeLayout();
+    drawGhost(L, { bright: true });
+    msg.textContent = "Here's the answer — take a good look, then tap Clear and try again!";
+  });
+  document.getElementById("checkBtn").addEventListener("click", () => {
+    if (!state.hasDrawn) {
+      msg.textContent = "Draw something first! Trace over the faded text.";
+      return;
+    }
+    const L = computeLayout();
+    const { stars, precision, coverage } = scoreTrace(L);
+    const key = currentKey();
+    const prev = state.stars[key] || 0;
+    if (stars > prev) {
+      state.stars[key] = stars;
+      try { localStorage.setItem(STAR_KEY, JSON.stringify(state.stars)); } catch (e) {}
+    }
+    updateStars();
+    updateItemGrid();
+
+    const label = state.mode === "sentence" ? "sentence" : state.mode;
+    if (stars === 3) {
+      msg.textContent = `🌟 Amazing ${label}! Three stars! 🌟`;
+      celebrate("Bravo!");
+    } else if (stars === 2) {
+      msg.textContent = `Great job! One more try for three stars!`;
+      celebrate("Nice!");
+    } else if (stars === 1) {
+      msg.textContent = `You got the shape! Try to stay closer to the faded ${label}.`;
+    } else if (coverage < 0.2) {
+      msg.textContent = `Hmm — try tracing right on top of the faded ${label}.`;
+    } else if (precision < 0.4) {
+      msg.textContent = `Good effort! Try to stay inside the faded ${label}.`;
+    } else {
+      msg.textContent = `Almost! Trace a bit more of the ${label}.`;
+    }
+  });
+
+  // --- Celebration ---
+  const colors = ["#ff8fb8", "#ffd65a", "#7ad66a", "#5aa9ff", "#a48cff", "#ff9d5a"];
+  function celebrate(word) {
+    const root = document.getElementById("celebrate");
+    const bravo = document.createElement("div");
+    bravo.className = "bravo";
+    bravo.textContent = word;
+    root.appendChild(bravo);
+    setTimeout(() => bravo.remove(), 1700);
+
+    const n = word === "Bravo!" ? 80 : 40;
+    for (let i = 0; i < n; i++) {
+      const c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      c.style.animationDuration = (1.4 + Math.random() * 1.6) + "s";
+      c.style.animationDelay = (Math.random() * 0.3) + "s";
+      c.style.borderRadius = Math.random() < 0.5 ? "2px" : "50%";
+      root.appendChild(c);
+      setTimeout(() => c.remove(), 3200);
+    }
+  }
+
+  // --- Boot ---
+  function boot() {
+    buildItemGrid();
+    refresh();
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot);
+  else window.addEventListener("load", boot);
+  window.addEventListener("resize", () => refresh());
+})();
+</script>
+</body>
+</html>
