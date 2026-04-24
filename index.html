@@ -130,6 +130,7 @@
     position: relative;
     width: 100%;
     aspect-ratio: 2 / 1;
+    max-height: 75vh;
     border-radius: 16px;
     overflow: hidden;
     background: var(--paper);
@@ -197,7 +198,7 @@
   }
   .total {
     position: absolute;
-    top: -14px; right: 12px;
+    top: -22px; right: 14px;
     background: var(--purple);
     color: #fff;
     border: 3px solid var(--ink);
@@ -205,6 +206,7 @@
     padding: 4px 14px;
     font-weight: 700;
     box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+    z-index: 5;
   }
   .hidden { display: none !important; }
 
@@ -232,6 +234,32 @@
     40%  { transform: translate(-50%, -50%) scale(1.1) rotate(5deg);  opacity: 1; }
     70%  { transform: translate(-50%, -50%) scale(1)   rotate(-2deg); }
     100% { transform: translate(-50%, -50%) scale(1)   rotate(0);     opacity: 0; }
+  }
+
+  /* Tablet portrait / small landscape: keep grid but scale up for touch + viewing distance */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .wrap { max-width: 820px; padding: 10px 18px 40px; }
+    header { padding: 14px 12px 4px; }
+    h1 { font-size: 38px; }
+    .tag { font-size: 15px; }
+
+    .controls { gap: 12px; margin: 14px 0; }
+    .toggle-group button { padding: 9px 18px; font-size: 16px; }
+
+    .items { gap: 8px; }
+    .items.letters button   { font-size: 28px; border-width: 3px; }
+    .items.words button     { font-size: 24px; padding: 12px 6px; border-width: 3px; }
+    .items.sentences button { font-size: 22px; padding: 14px 18px; border-width: 3px; }
+
+    .canvas-holder { aspect-ratio: 3 / 2; max-height: 60vh; }
+    .stage { padding: 10px; border-radius: 24px; }
+
+    .total { font-size: 16px; padding: 5px 16px; }
+    .score-bar { font-size: 16px; gap: 14px; }
+    .score-bar .stars { font-size: 28px; }
+    .msg { font-size: 20px; margin-top: 10px; }
+    .buttons { gap: 12px; margin-top: 14px; }
+    .btn { padding: 12px 22px; font-size: 17px; }
   }
 
   @media (max-width: 640px) {
@@ -267,10 +295,10 @@
     .items.words button     { min-width: 86px; padding: 10px 14px; font-size: 20px; }
     .items.sentences button { min-width: 220px; padding: 10px 14px; font-size: 18px; }
 
-    .canvas-holder { aspect-ratio: 3 / 2; border-radius: 12px; }
+    .canvas-holder { aspect-ratio: 3 / 2; min-height: 240px; max-height: 58vh; border-radius: 12px; }
     .stage { padding: 6px; border-radius: 18px; border-width: 3px; }
 
-    .total { top: -11px; right: 10px; font-size: 13px; padding: 3px 10px; border-width: 2px; }
+    .total { top: -18px; right: 10px; font-size: 13px; padding: 3px 10px; border-width: 2px; }
 
     .score-bar { font-size: 13px; gap: 6px; margin-top: 8px; }
     .score-bar .stars { font-size: 20px; }
@@ -428,26 +456,33 @@
   }
 
   // Pick font size + rule positions that fit the current content.
-  // Playwrite cursive capitals have tall entry loops and lowercase y/g/j/p/q
-  // drop well below baseline — metrics here budget for both.
+  // Probes the actual font metrics (Playwrite cursive caps like Y/J/Z have
+  // unusually tall entry loops AND deep descender loops) so nothing clips.
   function computeLayout() {
     const w = drawCanvas.clientWidth;
     const h = drawCanvas.clientHeight;
     const content = currentContent();
 
-    // Ratios expressed as fractions of fontSize
-    const ascenderR  = 1.00;  // space above baseline for tall capitals + loops
-    const descenderR = 0.40;  // space below baseline for y/g/j/p/q
-    const xHeightR   = 0.50;  // top of lowercase x-height
-    const vMargin    = Math.max(8, h * 0.05);
-
+    const xHeightR = 0.50;
+    const vMargin  = Math.max(8, h * 0.05);
     const availableH = h - 2 * vMargin;
-    // Font size bounded by available vertical space divided by total vertical extent
-    let fontSize = availableH / (ascenderR + descenderR);
-    // Leave a bit more breathing room for words/sentences
+    const safety = 1.06; // small buffer for glyph outlines exceeding the reported bounds
+
+    // Measure font's real ascent/descent using a probe string that exercises
+    // both a tall capital and deep descenders
+    const probeSize = 100;
+    gCtx.font = `400 ${probeSize}px "Playwrite US Trad", cursive`;
+    const probe = gCtx.measureText("YHjgpq");
+    const rawAscent  = probe.fontBoundingBoxAscent  || probe.actualBoundingBoxAscent  || probeSize * 1.05;
+    const rawDescent = probe.fontBoundingBoxDescent || probe.actualBoundingBoxDescent || probeSize * 0.50;
+    const ascentR  = (rawAscent  / probeSize) * safety;
+    const descentR = (rawDescent / probeSize) * safety;
+
+    // Font size bounded by total vertical extent (ascent + descent)
+    let fontSize = availableH / (ascentR + descentR);
     if (state.mode !== "letter") fontSize *= 0.95;
 
-    // Shrink if the string is too wide
+    // Shrink further if the string is too wide
     gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
     const maxW = w * 0.92;
     const tm = gCtx.measureText(content);
@@ -456,11 +491,10 @@
     gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
     const textWidth = gCtx.measureText(content).width;
 
-    // Place baseline so descenders clear the bottom margin
-    const baseY    = h - vMargin - fontSize * descenderR;
-    const topY     = baseY - fontSize * ascenderR;
+    const baseY    = h - vMargin - fontSize * descentR;
+    const topY     = baseY - fontSize * ascentR;
     const midY     = baseY - fontSize * xHeightR;
-    const descendY = baseY + fontSize * descenderR;
+    const descendY = baseY + fontSize * descentR;
 
     const startX = (w - textWidth) / 2;
     return { w, h, fontSize, baseY, topY, midY, descendY, startX, textWidth, content };
