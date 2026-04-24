@@ -335,6 +335,7 @@
     </div>
     <button class="btn blue" id="prevBtn">◀ Prev</button>
     <button class="btn blue" id="nextBtn">Next ▶</button>
+    <button class="btn ghost" id="randomBtn">🎲 Random</button>
   </div>
 
   <div class="items letters" id="items"></div>
@@ -363,20 +364,40 @@
 
 <script>
 (() => {
+  // Grade 1-3 friendly: short sight words, familiar nouns, simple verbs
   const WORDS = [
-    "cat", "dog", "sun", "bee", "hat",
-    "fish", "cake", "book", "moon", "star",
-    "tree", "love", "smile", "happy", "apple"
+    "cat", "dog", "sun", "moon", "star", "tree", "bird", "fish",
+    "frog", "duck", "pig", "cow", "ball", "cake", "book", "hat",
+    "bat", "car", "bus", "toy", "bed", "cup", "pen", "mom",
+    "dad", "run", "jump", "play", "sing", "read", "eat", "swim",
+    "smile", "happy", "love", "kind", "brave", "fun", "nice", "warm"
   ];
+  // Grade 1-3 sentences: 3-6 words, present tense, sight-word heavy, no tricky punctuation
   const SENTENCES = [
-    "I love you.",
-    "The cat sat.",
-    "We are happy.",
+    "I can run fast.",
+    "The sun is hot.",
     "My dog is fun.",
-    "The sun is bright.",
-    "Cursive is cool.",
-    "Practice every day.",
-    "Kindness wins."
+    "I love my mom.",
+    "We play all day.",
+    "The cat is cute.",
+    "I like to read.",
+    "Be a kind friend.",
+    "I am happy today.",
+    "The sky is blue.",
+    "Birds can fly.",
+    "I want to swim.",
+    "The moon is bright.",
+    "Share with a friend.",
+    "Let us go play.",
+    "Flowers are pretty.",
+    "I can count to ten.",
+    "Dogs love to run.",
+    "The fish swims fast.",
+    "My dad is funny.",
+    "Today is a good day.",
+    "I love my family.",
+    "Be brave and kind.",
+    "Reading is so fun."
   ];
 
   const rulesCanvas = document.getElementById("rules");
@@ -455,31 +476,32 @@
     }
   }
 
-  // Pick font size + rule positions that fit the current content.
-  // Probes the actual font metrics (Playwrite cursive caps like Y/J/Z have
-  // unusually tall entry loops AND deep descender loops) so nothing clips.
+  // Pick font size + rule positions using the font's real measured metrics
+  // so the top / mid / base / descender guide lines land exactly on the
+  // tallest cap, the x-height, the baseline, and the deepest descender.
   function computeLayout() {
     const w = drawCanvas.clientWidth;
     const h = drawCanvas.clientHeight;
     const content = currentContent();
 
-    const xHeightR = 0.50;
-    const vMargin  = Math.max(8, h * 0.05);
+    const vMargin = Math.max(8, h * 0.05);
     const availableH = h - 2 * vMargin;
-    const safety = 1.06; // small buffer for glyph outlines exceeding the reported bounds
+    const headroom = availableH * 0.03; // tiny breathing room top + bottom
 
-    // Measure font's real ascent/descent using a probe string that exercises
-    // both a tall capital and deep descenders
+    // Probe the font: tallest extent, x-height, deepest descent
     const probeSize = 100;
     gCtx.font = `400 ${probeSize}px "Playwrite US Trad", cursive`;
-    const probe = gCtx.measureText("YHjgpq");
-    const rawAscent  = probe.fontBoundingBoxAscent  || probe.actualBoundingBoxAscent  || probeSize * 1.05;
-    const rawDescent = probe.fontBoundingBoxDescent || probe.actualBoundingBoxDescent || probeSize * 0.50;
-    const ascentR  = (rawAscent  / probeSize) * safety;
-    const descentR = (rawDescent / probeSize) * safety;
+    const fullProbe = gCtx.measureText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+    const xProbe    = gCtx.measureText("oxaeimnrsuvw");
 
-    // Font size bounded by total vertical extent (ascent + descent)
-    let fontSize = availableH / (ascentR + descentR);
+    const ascentR  = Math.max(fullProbe.actualBoundingBoxAscent  || 0,
+                              fullProbe.fontBoundingBoxAscent    || 0) / probeSize;
+    const descentR = Math.max(fullProbe.actualBoundingBoxDescent || 0,
+                              fullProbe.fontBoundingBoxDescent   || 0) / probeSize;
+    const xHeightR = (xProbe.actualBoundingBoxAscent || probeSize * 0.4) / probeSize;
+
+    // Font size bounded by total vertical extent (with a tiny buffer)
+    let fontSize = (availableH - headroom * 2) / (ascentR + descentR);
     if (state.mode !== "letter") fontSize *= 0.95;
 
     // Shrink further if the string is too wide
@@ -491,7 +513,8 @@
     gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
     const textWidth = gCtx.measureText(content).width;
 
-    const baseY    = h - vMargin - fontSize * descentR;
+    // Place baseline so descender + bottom buffer clear the bottom margin
+    const baseY    = h - vMargin - headroom - fontSize * descentR;
     const topY     = baseY - fontSize * ascentR;
     const midY     = baseY - fontSize * xHeightR;
     const descendY = baseY + fontSize * descentR;
@@ -701,6 +724,8 @@
     updateItemGrid();
     updateStars();
     caseToggle.classList.toggle("hidden", state.mode !== "letter");
+    itemsDiv.classList.toggle("hidden", state.mode !== "letter");
+    document.getElementById("randomBtn").classList.toggle("hidden", state.mode === "letter");
 
     if (state.mode === "letter")      msg.textContent = "Start at the green dot. Trace slowly — you got this!";
     else if (state.mode === "word")   msg.textContent = "Trace the whole word in one smooth flow. Take your time!";
@@ -731,6 +756,14 @@
   });
   document.getElementById("nextBtn").addEventListener("click", () => {
     setCurrentIdx(currentIdx() + 1);
+    refresh();
+  });
+  document.getElementById("randomBtn").addEventListener("click", () => {
+    const list = currentList();
+    if (list.length <= 1) return;
+    let idx = currentIdx();
+    while (idx === currentIdx()) idx = Math.floor(Math.random() * list.length);
+    setCurrentIdx(idx);
     refresh();
   });
   document.getElementById("clearBtn").addEventListener("click", () => {
