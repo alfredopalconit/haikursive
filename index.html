@@ -44,7 +44,7 @@
     font-family: "Fredoka", sans-serif;
     font-weight: 700;
     font-style: italic;
-    color: var(--sun);
+    color: #fff;
   }
   .tag { font-size: 14px; color: #4a4a7a; opacity: 0.85; }
   .wrap { max-width: 1000px; margin: 0 auto; padding: 8px 14px 40px; }
@@ -608,15 +608,6 @@
     gCtx.textBaseline = "alphabetic";
     gCtx.fillStyle = `rgba(70, 80, 160, ${opts.bright ? 0.95 : 0.55})`;
     gCtx.fillText(content, startX, baseY);
-
-    // Start dot (green) at the first letter
-    gCtx.fillStyle = "rgba(122, 214, 106, 0.95)";
-    gCtx.beginPath();
-    gCtx.arc(startX + fontSize * 0.04, baseY - fontSize * 0.15, Math.max(5, fontSize * 0.05), 0, Math.PI * 2);
-    gCtx.fill();
-    gCtx.strokeStyle = "#fff";
-    gCtx.lineWidth = 2;
-    gCtx.stroke();
   }
 
   // --- Drawing ---
@@ -778,7 +769,7 @@
     itemsDiv.classList.toggle("hidden", state.mode !== "letter");
     document.getElementById("randomBtn").classList.toggle("hidden", state.mode === "letter");
 
-    if (state.mode === "letter")      msg.textContent = "Start at the green dot. Trace slowly — you got this!";
+    if (state.mode === "letter")      msg.textContent = "Trace right over the faded letter. You got this!";
     else if (state.mode === "word")   msg.textContent = "Trace the whole word in one smooth flow. Take your time!";
     else                               msg.textContent = "Trace the full sentence. Go slow — remember to leave spaces between words!";
   }
