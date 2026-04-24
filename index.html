@@ -364,15 +364,31 @@
 
 <script>
 (() => {
-  // Grade 1-3 friendly: short sight words, familiar nouns, simple verbs
+  // 100 grade 1-3 friendly words: short, common vocabulary, familiar nouns/verbs
   const WORDS = [
-    "cat", "dog", "sun", "moon", "star", "tree", "bird", "fish",
-    "frog", "duck", "pig", "cow", "ball", "cake", "book", "hat",
-    "bat", "car", "bus", "toy", "bed", "cup", "pen", "mom",
-    "dad", "run", "jump", "play", "sing", "read", "eat", "swim",
-    "smile", "happy", "love", "kind", "brave", "fun", "nice", "warm"
+    // Animals
+    "cat", "dog", "pig", "cow", "hen", "fox", "owl", "bat", "ant", "bee",
+    "bug", "duck", "frog", "fish", "bird", "mouse", "bear", "lion", "horse", "sheep",
+    // Food
+    "cake", "milk", "egg", "jam", "apple", "pear", "plum", "nut", "juice", "snack",
+    // Nature
+    "sun", "moon", "star", "sky", "tree", "leaf", "rain", "snow", "wind", "cloud",
+    "flower", "grass", "rock", "pond", "hill", "beach",
+    // Family / people
+    "mom", "dad", "baby", "kid", "boy", "girl", "aunt", "friend",
+    // School
+    "book", "pen", "desk", "class", "read", "math", "art",
+    // Actions
+    "run", "jump", "play", "sing", "hop", "skip", "swim", "eat", "nap", "smile",
+    "laugh", "draw", "paint", "write", "dance", "sleep",
+    // Feelings
+    "happy", "sad", "glad", "kind", "brave", "funny", "nice", "cool", "warm",
+    // Objects
+    "ball", "toy", "hat", "bed", "cup", "car", "bus", "bike",
+    // Colors + places
+    "red", "blue", "pink", "green", "home", "park"
   ];
-  // Grade 1-3 sentences: 3-6 words, present tense, sight-word heavy, no tricky punctuation
+  // 50 grade 1-3 sentences: 3-6 words, sight-word heavy, simple present tense
   const SENTENCES = [
     "I can run fast.",
     "The sun is hot.",
@@ -397,7 +413,33 @@
     "Today is a good day.",
     "I love my family.",
     "Be brave and kind.",
-    "Reading is so fun."
+    "Reading is so fun.",
+    "I help my friend.",
+    "We love to sing.",
+    "The cat is soft.",
+    "I eat my lunch.",
+    "Please say thank you.",
+    "I am a star.",
+    "We go to school.",
+    "The bus is yellow.",
+    "I can tie my shoes.",
+    "My cat is fluffy.",
+    "Summer is so warm.",
+    "Winter is very cold.",
+    "I like ice cream.",
+    "The baby is sleeping.",
+    "We are best friends.",
+    "Dogs and cats play.",
+    "I can write my name.",
+    "The frog says ribbit.",
+    "Stars shine at night.",
+    "The dog wags his tail.",
+    "I love to learn.",
+    "Bees make sweet honey.",
+    "The rainbow is pretty.",
+    "I can do it.",
+    "Always try your best.",
+    "I am growing up."
   ];
 
   const rulesCanvas = document.getElementById("rules");
@@ -476,9 +518,13 @@
     }
   }
 
-  // Pick font size + rule positions using the font's real measured metrics
-  // so the top / mid / base / descender guide lines land exactly on the
-  // tallest cap, the x-height, the baseline, and the deepest descender.
+  // Pick font size + rule positions using measured font metrics.
+  // Sizing uses worst-case (tallest flourish, deepest descender) so nothing
+  // clips. Guide lines use SCHOOL-CURSIVE conventions: top line at standard
+  // cap height (B/C/D/F/L/R reach it), midline at x-height (top of o/a/e),
+  // baseline at the baseline, descender line at typical descender depth.
+  // Flourished caps like Y/J/Z will extend slightly above the top line —
+  // that's correct: flourishes are allowed to break the cap line.
   function computeLayout() {
     const w = drawCanvas.clientWidth;
     const h = drawCanvas.clientHeight;
@@ -486,25 +532,29 @@
 
     const vMargin = Math.max(8, h * 0.05);
     const availableH = h - 2 * vMargin;
-    const headroom = availableH * 0.03; // tiny breathing room top + bottom
+    const headroom = availableH * 0.03;
 
-    // Probe the font: tallest extent, x-height, deepest descent
     const probeSize = 100;
     gCtx.font = `400 ${probeSize}px "Playwrite US Trad", cursive`;
+
+    // SIZING bounds (worst-case: flourished caps + deep descenders)
     const fullProbe = gCtx.measureText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+    const maxAscentR = Math.max(fullProbe.actualBoundingBoxAscent || 0,
+                                fullProbe.fontBoundingBoxAscent   || 0) / probeSize;
+    const maxDescentR = Math.max(fullProbe.actualBoundingBoxDescent || 0,
+                                 fullProbe.fontBoundingBoxDescent   || 0) / probeSize;
+
+    // GUIDE LINE positions (standard cap / x-height / typical descender)
+    const capProbe  = gCtx.measureText("BCDFILMNOPRU");
     const xProbe    = gCtx.measureText("oxaeimnrsuvw");
+    const descProbe = gCtx.measureText("ygjpq");
+    const capR      = (capProbe.actualBoundingBoxAscent   || probeSize * 0.72) / probeSize;
+    const xHeightR  = (xProbe.actualBoundingBoxAscent     || probeSize * 0.42) / probeSize;
+    const descLineR = (descProbe.actualBoundingBoxDescent || probeSize * 0.30) / probeSize;
 
-    const ascentR  = Math.max(fullProbe.actualBoundingBoxAscent  || 0,
-                              fullProbe.fontBoundingBoxAscent    || 0) / probeSize;
-    const descentR = Math.max(fullProbe.actualBoundingBoxDescent || 0,
-                              fullProbe.fontBoundingBoxDescent   || 0) / probeSize;
-    const xHeightR = (xProbe.actualBoundingBoxAscent || probeSize * 0.4) / probeSize;
-
-    // Font size bounded by total vertical extent (with a tiny buffer)
-    let fontSize = (availableH - headroom * 2) / (ascentR + descentR);
+    let fontSize = (availableH - headroom * 2) / (maxAscentR + maxDescentR);
     if (state.mode !== "letter") fontSize *= 0.95;
 
-    // Shrink further if the string is too wide
     gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
     const maxW = w * 0.92;
     const tm = gCtx.measureText(content);
@@ -513,11 +563,10 @@
     gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
     const textWidth = gCtx.measureText(content).width;
 
-    // Place baseline so descender + bottom buffer clear the bottom margin
-    const baseY    = h - vMargin - headroom - fontSize * descentR;
-    const topY     = baseY - fontSize * ascentR;
+    const baseY    = h - vMargin - headroom - fontSize * maxDescentR;
+    const topY     = baseY - fontSize * capR;
     const midY     = baseY - fontSize * xHeightR;
-    const descendY = baseY + fontSize * descentR;
+    const descendY = baseY + fontSize * descLineR;
 
     const startX = (w - textWidth) / 2;
     return { w, h, fontSize, baseY, topY, midY, descendY, startX, textWidth, content };
