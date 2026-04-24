@@ -832,6 +832,7 @@
     }
     updateStars();
     updateItemGrid();
+    if (stars > 0) playStarSound(stars);
 
     const label = state.mode === "sentence" ? "sentence" : state.mode;
     if (stars === 3) {
@@ -850,6 +851,49 @@
       msg.textContent = `Almost! Trace a bit more of the ${label}.`;
     }
   });
+
+  // --- Sound (Web Audio synthesis, no external files) ---
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) { return null; }
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function playNote(freq, startTime, duration, volume = 0.18) {
+    if (!audioCtx) return;
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+  }
+  function playStarSound(stars) {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const C5 = 523.25, E5 = 659.25, G5 = 783.99, C6 = 1046.50;
+    const melodies = {
+      1: [[G5, 0.18]],
+      2: [[C5, 0.12], [E5, 0.12], [G5, 0.22]],
+      3: [[C5, 0.10], [E5, 0.10], [G5, 0.10], [C6, 0.35]],
+    };
+    const notes = melodies[stars];
+    if (!notes) return;
+    let t = ctx.currentTime;
+    for (const [freq, dur] of notes) {
+      playNote(freq, t, dur);
+      t += dur * 0.8;
+    }
+  }
 
   // --- Celebration ---
   const colors = ["#ff8fb8", "#ffd65a", "#7ad66a", "#5aa9ff", "#a48cff", "#ff9d5a"];
