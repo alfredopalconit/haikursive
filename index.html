@@ -40,11 +40,11 @@
     text-shadow: 0 3px 0 #ff8fb8, 0 6px 0 rgba(0,0,0,0.08);
     letter-spacing: 0.5px;
   }
-  h1 .cursive {
-    font-family: "Playwrite US Trad", cursive;
-    font-weight: 400;
-    font-size: 1.1em;
-    color: #fff;
+  h1 .brand {
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--sun);
   }
   .tag { font-size: 14px; color: #4a4a7a; opacity: 0.85; }
   .wrap { max-width: 1000px; margin: 0 auto; padding: 8px 14px 40px; }
@@ -318,7 +318,7 @@
 </head>
 <body>
 <header>
-  <h1>Welcome to <span class="cursive">Haikursive</span>!</h1>
+  <h1>Welcome to <span class="brand">Haikursive</span>!</h1>
   <div class="tag">Trace the faded letter, word, or sentence. Earn stars!</div>
 </header>
 
@@ -546,10 +546,12 @@
 
     // GUIDE LINE positions (standard cap / x-height / typical descender)
     const capProbe  = gCtx.measureText("BCDFILMNOPRU");
-    const xProbe    = gCtx.measureText("oxaeimnrsuvw");
     const descProbe = gCtx.measureText("ygjpq");
     const capR      = (capProbe.actualBoundingBoxAscent   || probeSize * 0.72) / probeSize;
-    const xHeightR  = (xProbe.actualBoundingBoxAscent     || probeSize * 0.42) / probeSize;
+    // Playwrite cursive lowercase letters have entry loops that push the
+    // measured ascent near cap height, so x-height has to come from a ratio.
+    // School cursive convention: x-height is ~half of cap height.
+    const xHeightR  = capR * 0.55;
     const descLineR = (descProbe.actualBoundingBoxDescent || probeSize * 0.30) / probeSize;
 
     let fontSize = (availableH - headroom * 2) / (maxAscentR + maxDescentR);
