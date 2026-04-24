@@ -30,6 +30,10 @@
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
   header { text-align: center; padding: 18px 12px 4px; }
   h1.brand {
@@ -370,6 +374,23 @@
 
 <script>
 (() => {
+  const _h = location.hostname;
+  const _ok = _h === "haikursive.pages.dev"
+           || _h.endsWith(".haikursive.pages.dev")
+           || _h === "localhost"
+           || _h === "127.0.0.1"
+           || _h === "";
+  if (!_ok) {
+    document.documentElement.innerHTML =
+      '<head><meta charset="utf-8"><title>Haikursive</title><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+      + '<body style="margin:0;font-family:system-ui,sans-serif;background:#a8e1ff;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px">'
+      + '<div><h1 style="color:#fff;text-shadow:0 3px 0 #ff8fb8;font-size:clamp(28px,6vw,48px)">Haikursive lives at<br><a href="https://haikursive.pages.dev" style="color:#ffd65a">haikursive.pages.dev</a></h1></div>'
+      + '</body>';
+    return;
+  }
+  document.addEventListener("contextmenu", e => e.preventDefault());
+  document.addEventListener("dragstart",    e => e.preventDefault());
+
   // 100 grade 1-3 friendly words: short, common vocabulary, familiar nouns/verbs
   const WORDS = [
     // Animals
