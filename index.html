@@ -260,10 +260,10 @@
 
     /* Tablet: grid of letters above the canvas eats ~130px vertical; trim
        max-height so letter mode fits iPad portrait without scrolling. */
-    .canvas-holder { max-height: 58vh; }
-    .canvas-holder.mode-letter   { aspect-ratio: 1 / 1; max-width: 58vh; }
+    .canvas-holder { max-height: 48vh; }
+    .canvas-holder.mode-letter   { aspect-ratio: 5 / 4; max-width: 60vh; }
     .canvas-holder.mode-word     { aspect-ratio: 2 / 1; }
-    .canvas-holder.mode-sentence { aspect-ratio: 3 / 2; }
+    .canvas-holder.mode-sentence { aspect-ratio: 5 / 3; }
     .stage { padding: 10px; border-radius: 24px; }
 
     .total { font-size: 16px; padding: 5px 16px; }
@@ -275,12 +275,12 @@
   }
 
   @media (max-width: 640px) {
-    header { padding: 10px 8px 2px; }
-    h1.brand { font-size: clamp(52px, 15vw, 68px); text-shadow: 0 3px 0 #ff8fb8; padding: 2px 8px 8px; }
+    header { padding: 6px 8px 0; }
+    h1.brand { font-size: clamp(44px, 13vw, 62px); text-shadow: 0 3px 0 #ff8fb8; padding: 0 8px 4px; }
     .tag { font-size: 12px; }
-    .wrap { padding: 4px 10px 20px; }
+    .wrap { padding: 2px 10px 16px; }
 
-    .controls { gap: 6px; margin: 6px 0; }
+    .controls { gap: 6px; margin: 4px 0; }
     .toggle-group { padding: 3px; }
     .toggle-group button { padding: 6px 10px; font-size: 13px; }
 
@@ -290,11 +290,9 @@
       grid-template-columns: none !important;
       overflow-x: auto;
       overflow-y: hidden;
-      gap: 8px;
-      padding: 6px 2px 10px;
-      margin: 4px -10px 8px;
-      padding-left: 10px;
-      padding-right: 10px;
+      gap: 6px;
+      padding: 4px 10px 6px;
+      margin: 2px -10px 4px;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
     }
@@ -307,22 +305,23 @@
     .items.words button     { min-width: 86px; padding: 10px 14px; font-size: 20px; }
     .items.sentences button { min-width: 220px; padding: 10px 14px; font-size: 18px; }
 
-    /* Phone: horizontal letter strip keeps UI tight; allow a bit more canvas.
-       Letter mode stays square on landscape by clamping max-width too. */
-    .canvas-holder { min-height: 240px; max-height: 55vh; border-radius: 12px; }
-    .canvas-holder.mode-letter   { aspect-ratio: 1 / 1; max-width: 55vh; }
+    /* Phone: single-letter canvas was too tall at 1:1 — use 4:3 so the
+       letter stays big horizontally but leaves room for controls + buttons
+       below. max-height caps it on short landscape phones too. */
+    .canvas-holder { min-height: 200px; max-height: 48vh; border-radius: 12px; }
+    .canvas-holder.mode-letter   { aspect-ratio: 4 / 3; max-width: 62vh; }
     .canvas-holder.mode-word     { aspect-ratio: 2 / 1; }
-    .canvas-holder.mode-sentence { aspect-ratio: 3 / 2; }
+    .canvas-holder.mode-sentence { aspect-ratio: 5 / 3; }
     .stage { padding: 6px; border-radius: 18px; border-width: 3px; }
 
     .total { top: -18px; right: 10px; font-size: 13px; padding: 3px 10px; border-width: 2px; }
 
-    .score-bar { font-size: 13px; gap: 6px; margin-top: 8px; }
-    .score-bar .stars { font-size: 20px; }
-    .msg { font-size: 14px; margin-top: 6px; }
+    .score-bar { font-size: 13px; gap: 6px; margin-top: 6px; }
+    .score-bar .stars { font-size: 18px; }
+    .msg { font-size: 13px; margin-top: 4px; min-height: 0; }
 
-    .buttons { gap: 8px; margin-top: 8px; }
-    .btn { padding: 9px 14px; font-size: 14px; border-width: 2px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); }
+    .buttons { gap: 8px; margin-top: 6px; }
+    .btn { padding: 8px 12px; font-size: 13px; border-width: 2px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); }
   }
   @media (max-width: 380px) {
     h1.brand { font-size: 52px; }
