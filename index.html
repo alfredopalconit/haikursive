@@ -32,19 +32,17 @@
     touch-action: manipulation;
   }
   header { text-align: center; padding: 18px 12px 4px; }
-  h1 {
+  h1.brand {
     margin: 0;
-    font-weight: 700;
-    font-size: clamp(28px, 5vw, 44px);
+    font-family: "Playwrite US Trad", "Fredoka", sans-serif;
+    font-weight: 400;
+    font-size: clamp(54px, 12vw, 110px);
+    letter-spacing: -0.09em; /* tighten so cursive "rs" connects to "ive" */
     color: #fff;
-    text-shadow: 0 3px 0 #ff8fb8, 0 6px 0 rgba(0,0,0,0.08);
-    letter-spacing: 0.5px;
-  }
-  h1 .brand {
-    font-family: "Fredoka", sans-serif;
-    font-weight: 700;
-    font-style: italic;
-    color: #fff;
+    text-shadow: 0 4px 0 var(--pink), 0 10px 0 rgba(0,0,0,0.1);
+    line-height: 1.05;
+    padding: 4px 8px 14px;
+    white-space: nowrap;
   }
   .tag { font-size: 14px; color: #4a4a7a; opacity: 0.85; }
   .wrap { max-width: 1000px; margin: 0 auto; padding: 8px 14px 40px; }
@@ -240,7 +238,7 @@
   @media (min-width: 641px) and (max-width: 1024px) {
     .wrap { max-width: 820px; padding: 10px 18px 40px; }
     header { padding: 14px 12px 4px; }
-    h1 { font-size: 38px; }
+    h1.brand { font-size: 84px; padding: 4px 8px 10px; }
     .tag { font-size: 15px; }
 
     .controls { gap: 12px; margin: 14px 0; }
@@ -264,7 +262,7 @@
 
   @media (max-width: 640px) {
     header { padding: 10px 8px 2px; }
-    h1 { font-size: clamp(22px, 6.5vw, 30px); text-shadow: 0 2px 0 #ff8fb8; }
+    h1.brand { font-size: clamp(52px, 15vw, 68px); text-shadow: 0 3px 0 #ff8fb8; padding: 2px 8px 8px; }
     .tag { font-size: 12px; }
     .wrap { padding: 4px 10px 20px; }
 
@@ -308,7 +306,7 @@
     .btn { padding: 9px 14px; font-size: 14px; border-width: 2px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); }
   }
   @media (max-width: 380px) {
-    h1 { font-size: 22px; }
+    h1.brand { font-size: 52px; }
     .items.letters button { width: 40px; height: 40px; font-size: 20px; }
     .items.words button   { min-width: 74px; font-size: 18px; }
     .btn { padding: 8px 10px; font-size: 13px; }
@@ -318,7 +316,7 @@
 </head>
 <body>
 <header>
-  <h1>Welcome to <span class="brand">Haikursive</span>!</h1>
+  <h1 class="brand">Haikursive</h1>
   <div class="tag">Trace the faded letter, word, or sentence. Earn stars!</div>
 </header>
 
@@ -353,6 +351,7 @@
     </div>
     <div class="msg" id="msg">Tap and drag to trace. Try to stay on the faded lines!</div>
     <div class="buttons">
+      <button class="btn blue" id="watchBtn">✏️ Watch me write</button>
       <button class="btn ghost" id="showBtn">👀 Show me</button>
       <button class="btn secondary" id="clearBtn">🧽 Clear</button>
       <button class="btn primary" id="checkBtn">✅ Check my work</button>
@@ -464,6 +463,68 @@
     sentenceIdx: 0,
     stars: {},
     hasDrawn: false,
+  };
+
+  // Hand-authored stroke paths per letter, in a 100x150 viewBox with baseline
+  // at y=110, cap top at y=10, x-height top at y=60, descender at y=140.
+  // Each letter is an array of strokes (SVG path "d") in pen-lift order.
+  // These are approximations of school-cursive (Zaner-Bloser style) stroke
+  // direction — the shapes may drift slightly from Playwrite's glyph; the
+  // point is teaching stroke ORDER and DIRECTION, which these get right.
+  const STROKE_PATHS = {
+    A: ["M 20 110 L 50 15 L 80 110", "M 33 68 L 67 68"],
+    B: ["M 25 110 L 25 15 Q 70 16 68 40 Q 62 55 25 55 Q 75 58 72 85 Q 60 112 25 110"],
+    C: ["M 78 30 Q 60 12 40 18 Q 15 28 15 62 Q 15 100 40 108 Q 65 112 80 95"],
+    D: ["M 22 110 L 22 15 Q 78 15 78 62 Q 78 110 22 110"],
+    E: ["M 78 25 Q 62 12 42 18 Q 15 25 15 48 Q 15 58 40 58 M 15 58 Q 15 85 18 98 Q 30 112 52 110 Q 70 108 80 95"],
+    F: ["M 78 20 Q 48 10 35 30 L 35 110", "M 15 65 L 60 65"],
+    G: ["M 78 30 Q 60 12 40 18 Q 15 28 15 62 Q 15 100 40 108 Q 65 112 80 95 L 80 65 L 48 65"],
+    H: ["M 25 15 L 25 110", "M 25 65 L 75 65", "M 75 15 L 75 110"],
+    I: ["M 50 110 Q 30 100 32 65 Q 32 25 60 18 Q 82 22 78 42 Q 60 48 32 35"],
+    J: ["M 55 15 L 55 120 Q 55 140 35 140 Q 18 138 22 122"],
+    K: ["M 25 15 L 25 110", "M 78 20 L 25 65 L 78 110"],
+    L: ["M 32 32 Q 15 15 32 12 Q 50 12 45 32 L 28 105 Q 62 115 88 100"],
+    M: ["M 15 110 L 15 15 L 50 85 L 85 15 L 85 110"],
+    N: ["M 15 110 L 15 15 L 85 110 L 85 15"],
+    O: ["M 55 18 Q 18 18 18 62 Q 18 108 55 108 Q 85 108 85 62 Q 85 18 55 18 Q 70 18 78 32"],
+    P: ["M 25 110 L 25 15 Q 78 15 78 45 Q 78 72 25 72"],
+    Q: ["M 55 18 Q 18 18 18 62 Q 18 108 55 108 Q 85 108 85 62 Q 85 18 55 18", "M 65 92 L 95 125"],
+    R: ["M 25 110 L 25 15 Q 78 15 78 42 Q 78 68 25 68 Q 52 68 82 110"],
+    S: ["M 78 30 Q 62 12 42 18 Q 15 25 22 48 Q 32 62 58 62 Q 85 65 82 92 Q 72 115 42 110 Q 22 108 22 90"],
+    T: ["M 15 20 L 82 20", "M 48 20 L 48 110"],
+    U: ["M 22 15 L 22 88 Q 22 112 50 112 Q 78 112 78 88 L 78 15"],
+    V: ["M 18 15 L 50 110 L 82 15"],
+    W: ["M 10 15 L 28 110 L 50 35 L 72 110 L 90 15"],
+    X: ["M 18 15 L 82 110", "M 82 15 L 18 110"],
+    Y: ["M 20 15 L 50 55", "M 80 15 L 50 55 L 50 125 Q 50 142 32 140 Q 18 138 22 128"],
+    Z: ["M 22 22 L 78 22 L 28 100 L 82 100"],
+
+    a: ["M 70 68 Q 35 62 35 87 Q 35 112 70 108 L 70 68 L 70 110 Q 78 115 85 108"],
+    b: ["M 35 15 Q 18 15 28 35 L 28 110 Q 28 72 55 72 Q 72 78 72 90 Q 72 108 42 108 Q 25 108 30 103"],
+    c: ["M 70 72 Q 55 62 42 68 Q 28 78 32 94 Q 42 110 68 105"],
+    d: ["M 70 68 Q 35 62 35 87 Q 35 112 70 108 L 70 15 L 70 110 Q 78 115 85 108"],
+    e: ["M 35 88 L 65 82 Q 70 68 50 66 Q 30 70 30 90 Q 30 112 55 110 Q 70 108 80 98"],
+    f: ["M 35 15 Q 18 15 28 32 L 32 130 Q 32 142 22 140 Q 12 138 15 128"],
+    g: ["M 70 68 Q 35 62 35 87 Q 35 112 70 108 L 70 110 L 70 130 Q 70 145 42 140 Q 28 138 32 128"],
+    h: ["M 35 15 Q 18 15 28 32 L 28 110 L 28 75 Q 48 65 62 75 L 62 110"],
+    i: ["M 40 68 L 40 108 Q 45 115 55 108", "M 42 48 L 42 54"],
+    j: ["M 40 68 L 40 128 Q 40 142 25 140 Q 15 138 18 128", "M 42 48 L 42 54"],
+    k: ["M 35 15 Q 18 15 28 32 L 28 110", "M 65 68 L 28 85 L 62 110"],
+    l: ["M 35 15 Q 15 15 30 35 L 30 105 Q 35 115 52 110"],
+    m: ["M 15 110 L 15 68 Q 22 62 30 68 L 30 110 L 30 68 Q 48 62 55 68 L 55 110 L 55 68 Q 72 62 78 68 L 78 110"],
+    n: ["M 20 110 L 20 68 Q 30 62 40 68 L 40 110 L 40 68 Q 55 62 62 68 L 62 110"],
+    o: ["M 58 68 Q 28 66 28 88 Q 28 110 58 108 Q 75 106 75 82 Q 75 62 58 68 Q 72 68 68 76"],
+    p: ["M 30 138 L 30 68 Q 65 62 65 85 Q 65 108 30 105"],
+    q: ["M 68 68 Q 30 62 30 88 Q 30 112 68 108 L 68 138 Q 82 142 85 128"],
+    r: ["M 25 110 L 25 68 Q 28 62 35 68 Q 48 60 52 78 Q 52 70 72 68"],
+    s: ["M 68 72 Q 55 62 42 66 Q 25 72 35 82 Q 52 84 58 92 Q 62 108 38 110 Q 22 110 26 97"],
+    t: ["M 42 35 L 42 100 Q 52 110 62 105", "M 25 58 L 58 58"],
+    u: ["M 25 68 L 25 95 Q 28 110 45 110 Q 62 110 62 95 L 62 68 L 62 110"],
+    v: ["M 20 68 L 45 110 L 68 68 Q 75 68 80 72"],
+    w: ["M 15 68 L 30 110 L 45 72 L 58 110 L 72 68"],
+    x: ["M 22 68 L 68 110", "M 68 68 L 22 110"],
+    y: ["M 25 68 L 25 92 Q 28 110 42 110 Q 58 110 58 92 L 58 68 L 58 130 Q 58 145 38 140 Q 25 138 28 128"],
+    z: ["M 25 72 L 62 72 L 25 105 L 65 105"],
   };
 
   const STAR_KEY = "cursiveclub_stars_v2";
@@ -797,6 +858,7 @@
     caseToggle.classList.toggle("hidden", state.mode !== "letter");
     itemsDiv.classList.toggle("hidden", state.mode !== "letter");
     document.getElementById("randomBtn").classList.toggle("hidden", state.mode === "letter");
+    document.getElementById("watchBtn").classList.toggle("hidden", state.mode !== "letter");
 
     if (state.mode === "letter")      msg.textContent = "Trace right over the faded letter. You got this!";
     else if (state.mode === "word")   msg.textContent = "Trace the whole word in one smooth flow. Take your time!";
@@ -841,6 +903,9 @@
     clearDraw();
     msg.textContent = "Fresh paper! Give it another try.";
   });
+  document.getElementById("watchBtn").addEventListener("click", () => {
+    animateLetterStrokes();
+  });
   document.getElementById("showBtn").addEventListener("click", () => {
     const L = computeLayout();
     drawGhost(L, { bright: true });
@@ -880,6 +945,144 @@
       msg.textContent = `Almost! Trace a bit more of the ${label}.`;
     }
   });
+
+  // --- Stroke direction animation ---
+  let animating = false;
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function animateLetterStrokes() {
+    if (animating || state.mode !== "letter") return;
+    const letter = currentContent();
+    const strokes = STROKE_PATHS[letter];
+    if (!strokes || !strokes.length) {
+      msg.textContent = "No stroke guide for this one yet!";
+      return;
+    }
+
+    animating = true;
+    msg.textContent = "Watch the red pen. Follow the direction with your finger!";
+    const L = computeLayout();
+    const line = L.lines[0];
+    const capHeightPx = line.baseY - line.topY;   // path y=10..110 → 100 units
+    const scale = capHeightPx / 100;
+    // Center path's 0..100 horizontal box on the ghost letter's center
+    const anchorX = line.startX + line.textWidth / 2 - 50 * scale;
+    const anchorY = line.baseY;
+    const toCanvas = (px, py) => ({
+      x: anchorX + px * scale,
+      y: anchorY + (py - 110) * scale,
+    });
+
+    clearDraw();
+    const strokePointsList = [];
+    for (let i = 0; i < strokes.length; i++) {
+      const pts = samplePath(strokes[i], toCanvas);
+      strokePointsList.push(pts);
+      await animateSingleStroke(pts, i + 1, strokes.length, strokePointsList, L);
+      await sleep(350);
+    }
+
+    // Restore faded ghost so the kid can trace
+    await sleep(400);
+    drawGhost(L);
+    animating = false;
+    msg.textContent = "Now you try! Trace right over the faded letter.";
+  }
+
+  function samplePath(pathD, toCanvas) {
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", pathD);
+    svg.appendChild(p);
+    svg.style.cssText = "position:absolute;left:-9999px;top:-9999px;visibility:hidden";
+    document.body.appendChild(svg);
+    const total = p.getTotalLength();
+    const samples = Math.max(24, Math.floor(total));
+    const pts = [];
+    for (let i = 0; i <= samples; i++) {
+      const pt = p.getPointAtLength((i / samples) * total);
+      pts.push(toCanvas(pt.x, pt.y));
+    }
+    svg.remove();
+    return pts;
+  }
+
+  function animateSingleStroke(pts, strokeNum, totalStrokes, allStrokes, L) {
+    return new Promise(resolve => {
+      const duration = 700 + pts.length * 4;
+      const t0 = performance.now();
+      function frame(now) {
+        const t = Math.min(1, (now - t0) / duration);
+        const idx = Math.floor(t * (pts.length - 1));
+        renderStrokeFrame(allStrokes, strokeNum - 1, idx, totalStrokes, L);
+        if (t < 1) requestAnimationFrame(frame);
+        else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function renderStrokeFrame(allStrokes, currentIdx, pointIdx, totalStrokes, L) {
+    drawGhost(L);
+    gCtx.lineCap = "round";
+    gCtx.lineJoin = "round";
+
+    // Completed strokes (fully drawn in red)
+    for (let s = 0; s < currentIdx; s++) {
+      const pts = allStrokes[s];
+      gCtx.strokeStyle = "rgba(229, 57, 53, 0.85)";
+      gCtx.lineWidth = Math.max(4, L.fontSize * 0.055);
+      gCtx.beginPath();
+      gCtx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) gCtx.lineTo(pts[i].x, pts[i].y);
+      gCtx.stroke();
+    }
+
+    // Current stroke up to pointIdx
+    const cur = allStrokes[currentIdx];
+    gCtx.strokeStyle = "rgba(229, 57, 53, 0.95)";
+    gCtx.lineWidth = Math.max(4, L.fontSize * 0.055);
+    gCtx.beginPath();
+    gCtx.moveTo(cur[0].x, cur[0].y);
+    for (let i = 1; i <= pointIdx; i++) gCtx.lineTo(cur[i].x, cur[i].y);
+    gCtx.stroke();
+
+    // Pen tip
+    const p = cur[pointIdx];
+    const dotR = Math.max(7, L.fontSize * 0.06);
+    gCtx.fillStyle = "#e53935";
+    gCtx.beginPath();
+    gCtx.arc(p.x, p.y, dotR, 0, Math.PI * 2);
+    gCtx.fill();
+    gCtx.strokeStyle = "#fff";
+    gCtx.lineWidth = 2;
+    gCtx.stroke();
+
+    // Stroke-number badges at each stroke's start (only if multi-stroke)
+    if (totalStrokes > 1) {
+      for (let s = 0; s <= currentIdx; s++) {
+        const start = allStrokes[s][0];
+        const badgeR = Math.max(11, L.fontSize * 0.075);
+        const bx = start.x - badgeR - 4;
+        const by = start.y - badgeR - 4;
+        gCtx.fillStyle = "#5aa9ff";
+        gCtx.beginPath();
+        gCtx.arc(bx, by, badgeR, 0, Math.PI * 2);
+        gCtx.fill();
+        gCtx.strokeStyle = "#2b2b4a";
+        gCtx.lineWidth = 2;
+        gCtx.stroke();
+        gCtx.fillStyle = "#fff";
+        gCtx.font = `bold ${Math.round(badgeR * 1.2)}px Fredoka, sans-serif`;
+        gCtx.textAlign = "center";
+        gCtx.textBaseline = "middle";
+        gCtx.fillText(String(s + 1), bx, by + 1);
+        gCtx.textAlign = "left";
+        gCtx.textBaseline = "alphabetic";
+      }
+    }
+  }
 
   // --- Sound (Web Audio synthesis, no external files) ---
   let audioCtx = null;
@@ -950,12 +1153,23 @@
   }
 
   // --- Boot ---
-  function boot() {
+  async function boot() {
+    // Explicitly request the critical font before any rendering so the canvas
+    // never falls back to the generic "cursive" serif italic while loading.
+    if (document.fonts && document.fonts.load) {
+      try {
+        await Promise.all([
+          document.fonts.load("400 100px \"Playwrite US Trad\""),
+          document.fonts.load("400 60px \"Playwrite US Trad\""),
+          document.fonts.load("700 1em Fredoka"),
+        ]);
+        if (document.fonts.ready) await document.fonts.ready;
+      } catch (e) {}
+    }
     buildItemGrid();
     refresh();
   }
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot);
-  else window.addEventListener("load", boot);
+  window.addEventListener("DOMContentLoaded", boot);
   window.addEventListener("resize", () => refresh());
 })();
 </script>
