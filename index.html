@@ -518,6 +518,21 @@
     }
   }
 
+  // Break a sentence into two roughly-equal lines at a word boundary.
+  function splitSentence(text) {
+    if (text.length < 12) return [text];
+    const words = text.split(" ");
+    if (words.length <= 2) return [text];
+    let bestSplit = 1, bestDiff = Infinity;
+    for (let i = 1; i < words.length; i++) {
+      const a = words.slice(0, i).join(" ");
+      const b = words.slice(i).join(" ");
+      const diff = Math.abs(a.length - b.length);
+      if (diff < bestDiff) { bestDiff = diff; bestSplit = i; }
+    }
+    return [words.slice(0, bestSplit).join(" "), words.slice(bestSplit).join(" ")];
+  }
+
   // Pick font size + rule positions using measured font metrics.
   // Sizing uses worst-case (tallest flourish, deepest descender) so nothing
   // clips. Guide lines use SCHOOL-CURSIVE conventions: top line at standard
@@ -536,78 +551,92 @@
 
     const probeSize = 100;
     gCtx.font = `400 ${probeSize}px "Playwrite US Trad", cursive`;
-
-    // SIZING bounds (worst-case: flourished caps + deep descenders)
     const fullProbe = gCtx.measureText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
     const maxAscentR = Math.max(fullProbe.actualBoundingBoxAscent || 0,
                                 fullProbe.fontBoundingBoxAscent   || 0) / probeSize;
     const maxDescentR = Math.max(fullProbe.actualBoundingBoxDescent || 0,
                                  fullProbe.fontBoundingBoxDescent   || 0) / probeSize;
-
-    // GUIDE LINE positions (standard cap / x-height / typical descender)
     const capProbe  = gCtx.measureText("BCDFILMNOPRU");
     const descProbe = gCtx.measureText("ygjpq");
     const capR      = (capProbe.actualBoundingBoxAscent   || probeSize * 0.72) / probeSize;
-    // Playwrite cursive lowercase letters have entry loops that push the
-    // measured ascent near cap height, so x-height has to come from a ratio.
-    // School cursive convention: x-height is ~half of cap height.
     const xHeightR  = capR * 0.55;
     const descLineR = (descProbe.actualBoundingBoxDescent || probeSize * 0.30) / probeSize;
 
-    let fontSize = (availableH - headroom * 2) / (maxAscentR + maxDescentR);
+    // Sentences split onto two lines so each letter stays big enough to trace.
+    const texts = (state.mode === "sentence") ? splitSentence(content) : [content];
+    const lineCount = texts.length;
+    const lineGapR = 0.18; // fraction of fontSize between lines
+    const totalR = lineCount * (maxAscentR + maxDescentR) + (lineCount - 1) * lineGapR;
+
+    let fontSize = (availableH - headroom * 2) / totalR;
     if (state.mode !== "letter") fontSize *= 0.95;
 
     gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
     const maxW = w * 0.92;
-    const tm = gCtx.measureText(content);
-    if (tm.width > maxW) fontSize = fontSize * (maxW / tm.width);
+    let widest = 0;
+    for (const t of texts) widest = Math.max(widest, gCtx.measureText(t).width);
+    if (widest > maxW) fontSize = fontSize * (maxW / widest);
 
     gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
-    const textWidth = gCtx.measureText(content).width;
+    const lineHeight = fontSize * (maxAscentR + maxDescentR);
+    const lineGap = fontSize * lineGapR;
+    const totalH = lineCount * lineHeight + (lineCount - 1) * lineGap;
+    const yStart = vMargin + headroom + Math.max(0, (availableH - headroom * 2 - totalH) / 2);
 
-    const baseY    = h - vMargin - headroom - fontSize * maxDescentR;
-    const topY     = baseY - fontSize * capR;
-    const midY     = baseY - fontSize * xHeightR;
-    const descendY = baseY + fontSize * descLineR;
+    const lines = [];
+    for (let i = 0; i < lineCount; i++) {
+      const text = texts[i];
+      const lineTop = yStart + i * (lineHeight + lineGap);
+      const baseY = lineTop + fontSize * maxAscentR;
+      const topY = baseY - fontSize * capR;
+      const midY = baseY - fontSize * xHeightR;
+      const descendY = baseY + fontSize * descLineR;
+      const textWidth = gCtx.measureText(text).width;
+      const startX = (w - textWidth) / 2;
+      lines.push({ text, baseY, topY, midY, descendY, startX, textWidth });
+    }
 
-    const startX = (w - textWidth) / 2;
-    return { w, h, fontSize, baseY, topY, midY, descendY, startX, textWidth, content };
+    return { w, h, fontSize, lines };
   }
 
   // --- Rule lines ---
   function drawRules(L) {
-    const { w, h, topY, midY, baseY, descendY } = L;
+    const { w, h, lines } = L;
     rCtx.clearRect(0, 0, w, h);
-    rCtx.lineWidth = 2;
+    for (const line of lines) {
+      const { topY, midY, baseY, descendY } = line;
+      rCtx.lineWidth = 2;
+      rCtx.setLineDash([8, 6]);
+      rCtx.strokeStyle = "#ffb3c7";
+      rCtx.beginPath(); rCtx.moveTo(0, topY); rCtx.lineTo(w, topY); rCtx.stroke();
 
-    rCtx.setLineDash([8, 6]);
-    rCtx.strokeStyle = "#ffb3c7";
-    rCtx.beginPath(); rCtx.moveTo(0, topY); rCtx.lineTo(w, topY); rCtx.stroke();
+      rCtx.strokeStyle = "#a8c8ff";
+      rCtx.beginPath(); rCtx.moveTo(0, midY); rCtx.lineTo(w, midY); rCtx.stroke();
 
-    rCtx.strokeStyle = "#a8c8ff";
-    rCtx.beginPath(); rCtx.moveTo(0, midY); rCtx.lineTo(w, midY); rCtx.stroke();
+      rCtx.setLineDash([]);
+      rCtx.strokeStyle = "#ff8fb8";
+      rCtx.lineWidth = 3;
+      rCtx.beginPath(); rCtx.moveTo(0, baseY); rCtx.lineTo(w, baseY); rCtx.stroke();
 
-    rCtx.setLineDash([]);
-    rCtx.strokeStyle = "#ff8fb8";
-    rCtx.lineWidth = 3;
-    rCtx.beginPath(); rCtx.moveTo(0, baseY); rCtx.lineTo(w, baseY); rCtx.stroke();
-
-    rCtx.setLineDash([4, 8]);
-    rCtx.lineWidth = 2;
-    rCtx.strokeStyle = "#e0d2f5";
-    rCtx.beginPath(); rCtx.moveTo(0, descendY); rCtx.lineTo(w, descendY); rCtx.stroke();
-    rCtx.setLineDash([]);
+      rCtx.setLineDash([4, 8]);
+      rCtx.lineWidth = 2;
+      rCtx.strokeStyle = "#e0d2f5";
+      rCtx.beginPath(); rCtx.moveTo(0, descendY); rCtx.lineTo(w, descendY); rCtx.stroke();
+      rCtx.setLineDash([]);
+    }
   }
 
   // --- Ghost text ---
   function drawGhost(L, opts = {}) {
-    const { w, h, fontSize, baseY, startX, content } = L;
+    const { w, h, fontSize, lines } = L;
     gCtx.clearRect(0, 0, w, h);
     gCtx.font = `400 ${fontSize}px "Playwrite US Trad", cursive`;
     gCtx.textAlign = "left";
     gCtx.textBaseline = "alphabetic";
     gCtx.fillStyle = `rgba(70, 80, 160, ${opts.bright ? 0.95 : 0.55})`;
-    gCtx.fillText(content, startX, baseY);
+    for (const line of lines) {
+      gCtx.fillText(line.text, line.startX, line.baseY);
+    }
   }
 
   // --- Drawing ---
@@ -666,7 +695,7 @@
 
   // --- Scoring ---
   function scoreTrace(L) {
-    const { w, h, fontSize, baseY, startX, content } = L;
+    const { w, h, fontSize, lines } = L;
 
     const off = document.createElement("canvas");
     off.width = drawCanvas.width;
@@ -678,7 +707,7 @@
     oCtx.textAlign = "left";
     oCtx.textBaseline = "alphabetic";
     oCtx.fillStyle = "#000";
-    oCtx.fillText(content, startX, baseY);
+    for (const line of lines) oCtx.fillText(line.text, line.startX, line.baseY);
 
     // Playwrite renders thin guide strokes — widen the "near the letter" tolerance
     // to fairly score a kid's thick pen against a thin line.
